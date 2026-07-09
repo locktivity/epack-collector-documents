@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/locktivity/epack-collector-documents/docs/schema/document-index.v1.0.0.json",
+  "title": "Document Index",
+  "description": "Index of documents included in an evidence pack, with pack-local artifact paths and content digests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["snapshot_id", "pipeline_id", "run_key", "digest", "captured_at", "documents"],
+  "properties": {
+    "snapshot_id": {
+      "type": "string",
+      "description": "Locktivity snapshot identifier for this captured document set."
+    },
+    "pipeline_id": {
+      "type": "string",
+      "description": "Pipeline whose document selection was captured."
+    },
+    "run_key": {
+      "type": "string",
+      "description": "Stable run identity used to make retries repeatable."
+    },
+    "digest": {
+      "type": "string",
+      "description": "Server-provided digest of the captured snapshot manifest."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when Locktivity captured the snapshot."
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Document"
+      }
+    }
+  },
+  "$defs": {
+    "Document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "name", "source", "warnings"],
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable document identifier from Locktivity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable document name."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the document came from, such as an upload or connected source."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Document-specific warnings, such as a selected document with no file yet."
+        },
+        "version_number": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Locktivity document version number, when the snapshot identified a version."
+        },
+        "document_type": {
+          "type": "string",
+          "pattern": "^evidencepack/[a-z0-9._-]+@v[0-9]+$",
+          "description": "Typed metadata schema emitted for this document."
+        },
+        "file": {
+          "$ref": "#/$defs/FilePointer"
+        },
+        "source_file": {
+          "$ref": "#/$defs/FilePointer"
+        },
+        "text": {
+          "$ref": "#/$defs/TextPointer"
+        },
+        "metadata": {
+          "$ref": "#/$defs/MetadataPointer"
+        }
+      }
+    },
+    "FilePointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest", "content_type", "byte_size"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^artifacts/documents/[^/]+/.+$",
+          "description": "Pack-local path to the staged document file."
+        },
+        "digest": {
+          "$ref": "#/$defs/SHA256Digest"
+        },
+        "content_type": {
+          "type": "string",
+          "description": "Server-provided content type for the staged document file."
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Server-provided byte size for the staged document file."
+        }
+      }
+    },
+    "TextPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^artifacts/documents/[^/]+/text\\.json$",
+          "description": "Pack-local path to the extracted text artifact."
+        },
+        "digest": {
+          "$ref": "#/$defs/SHA256Digest"
+        }
+      }
+    },
+    "MetadataPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^artifacts/documents/[^/]+/metadata\\.json$",
+          "description": "Pack-local path to the typed metadata artifact."
+        }
+      }
+    },
+    "SHA256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 digest of the staged artifact bytes."
+    }
+  }
+}

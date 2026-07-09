@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/locktivity/epack-collector-documents/docs/schema/document-text.v1.0.0.json",
+  "title": "Document Text",
+  "description": "Extracted text chunks for a document included in an evidence pack.",
+  "type": "object",
+  "required": ["chunks"],
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "description": "Document identifier when included by the text extraction service."
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TextChunk"
+      },
+      "description": "Ordered text chunks extracted from the document."
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "TextChunk": {
+      "type": "object",
+      "required": ["chunk_id", "text"],
+      "properties": {
+        "chunk_id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stable chunk index within the extracted text artifact."
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "One-based page number when the source document has pages."
+        },
+        "sheet": {
+          "type": "string",
+          "description": "Sheet name when the source document is a spreadsheet."
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "One-based row number when the source document is a spreadsheet."
+        },
+        "text": {
+          "type": "string",
+          "description": "Extracted text for this chunk."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
