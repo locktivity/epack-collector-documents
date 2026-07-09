@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/locktivity/epack-collector-documents/internal/locktivity"
 	"github.com/locktivity/epack/componentsdk"
 )
 
@@ -31,29 +30,6 @@ func TestResolveRunKey(t *testing.T) {
 	}
 	if got := resolveRunKey(nil, secrets(nil)); !strings.HasPrefix(got, "local-") {
 		t.Errorf("expected random local key, got %q", got)
-	}
-}
-
-// A custom endpoint must not blanket-disable download SSRF checks: only a
-// dev-tagged plain HTTP loopback endpoint relaxes them. HTTPS endpoints, even
-// loopback staging overrides, stay strict.
-func TestAllowInsecureDownloadsForEndpoint(t *testing.T) {
-	wantLocalHTTP := locktivity.PlainHTTPLoopbackDevBuilds()
-	cases := map[string]bool{
-		"":                         false,
-		"http://127.0.0.1:3000":    wantLocalHTTP,
-		"http://[::1]:3000":        wantLocalHTTP,
-		"http://localhost:3000":    wantLocalHTTP,
-		"https://127.0.0.1:3000":   false,
-		"http://10.0.0.1:3000":     false,
-		"http://93.184.216.34/x":   false,
-		"https://93.184.216.34/x":  false,
-		"https://api.locktivity/x": false,
-	}
-	for endpoint, want := range cases {
-		if got := locktivity.AllowInsecureDownloadsForEndpoint(endpoint); got != want {
-			t.Errorf("AllowInsecureDownloadsForEndpoint(%q) = %v, want %v", endpoint, got, want)
-		}
 	}
 }
 

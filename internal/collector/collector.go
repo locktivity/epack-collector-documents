@@ -234,7 +234,6 @@ func (r *collectionRun) collectFile(ctx context.Context, index int, doc locktivi
 	return staged, digest, nil
 }
 
-// collectSource stages the native source file, when present.
 func (r *collectionRun) collectSource(ctx context.Context, doc locktivity.Document, entry *DocumentIndexEntry) (string, error) {
 	if doc.SourceURL == "" { // LINT-ALLOW: branch only, fetch URL is never emitted
 		return "", nil
@@ -262,7 +261,6 @@ func (r *collectionRun) collectSource(ctx context.Context, doc locktivity.Docume
 	return staged.PackPath, nil
 }
 
-// artifactByteSize returns the shipped file size.
 func artifactByteSize(doc locktivity.Document) int64 {
 	if doc.ArtifactByteSize > 0 {
 		return doc.ArtifactByteSize

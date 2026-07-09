@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -39,7 +40,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "token-123", "test", false)
+	client := NewClient(server.URL, "token-123", "test")
 	snapshot, err := client.CreateSnapshot(context.Background(), "", "gha-42-1")
 	if err != nil {
 		t.Fatalf("CreateSnapshot failed: %v", err)
@@ -70,7 +71,7 @@ func TestCreateSnapshotAuthError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL, "bad", "test", false).CreateSnapshot(context.Background(), "", "run-1")
+	_, err := NewClient(server.URL, "bad", "test").CreateSnapshot(context.Background(), "", "run-1")
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
@@ -83,7 +84,7 @@ func TestCreateSnapshotConfigError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL, "token", "test", false).CreateSnapshot(context.Background(), "", "run-1")
+	_, err := NewClient(server.URL, "token", "test").CreateSnapshot(context.Background(), "", "run-1")
 	var configErr ConfigError
 	if !errors.As(err, &configErr) {
 		t.Fatalf("expected ConfigError, got %v", err)
@@ -106,7 +107,7 @@ func TestCreateSnapshotRetriesServerErrors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	snapshot, err := NewClient(server.URL, "token", "test", false).CreateSnapshot(context.Background(), "", "run-1")
+	snapshot, err := NewClient(server.URL, "token", "test").CreateSnapshot(context.Background(), "", "run-1")
 	if err != nil {
 		t.Fatalf("CreateSnapshot failed after retries: %v", err)
 	}
@@ -117,16 +118,24 @@ func TestCreateSnapshotRetriesServerErrors(t *testing.T) {
 
 func TestDownload(t *testing.T) {
 	content := []byte("%PDF-1.4 downloaded content")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "" {
+	c := NewClient("https://api.locktivity.com", "token", "test")
+	c.downloadClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.String() != "https://93.184.216.34/document.pdf" {
+			t.Errorf("unexpected download URL: %s", req.URL)
+		}
+		if req.Header.Get("Authorization") != "" {
 			t.Error("pre-signed downloads must not carry the API token")
 		}
-		_, _ = w.Write(content)
-	}))
-	defer server.Close()
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(content)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
 
 	var buf bytes.Buffer
-	digest, n, err := NewClient(server.URL, "token", "test", true).Download(context.Background(), server.URL, &buf)
+	digest, n, err := c.Download(context.Background(), "https://93.184.216.34/document.pdf", &buf)
 	if err != nil {
 		t.Fatalf("Download failed: %v", err)
 	}
@@ -141,7 +150,7 @@ func TestDownload(t *testing.T) {
 }
 
 func TestValidateFetchURLRejectsNonPublic(t *testing.T) {
-	c := NewClient("https://api.locktivity.com", "token", "test", false)
+	c := NewClient("https://api.locktivity.com", "token", "test")
 	for _, raw := range []string{
 		"http://files.example/x",                    // non-https
 		"https://user:pass@files.example/x",         // embedded credentials
@@ -170,27 +179,36 @@ func TestValidateFetchIPsRejectsAnyNonPublicAddress(t *testing.T) {
 	}
 }
 
-func TestValidateFetchURLInsecureBypass(t *testing.T) {
-	c := NewClient("http://api.lvh.me:3000", "token", "test", true)
+func TestValidateFetchURLRejectsPlainHTTPLoopback(t *testing.T) {
+	c := NewClient("https://api.locktivity.com", "token", "test")
 	u, _ := url.Parse("http://127.0.0.1:3000/rails/active_storage/x")
-	if err := c.validateFetchURL(u); err != nil {
-		t.Errorf("insecure client should allow a local URL: %v", err)
+	if err := c.validateFetchURL(u); err == nil {
+		t.Fatal("expected plain HTTP loopback URL to be rejected")
 	}
 }
 
 func TestDownloadBoundsSize(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(make([]byte, 100))
-	}))
-	defer server.Close()
-
-	c := NewClient(server.URL, "token", "test", true)
+	c := NewClient("https://api.locktivity.com", "token", "test")
+	c.downloadClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(make([]byte, 100))),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
 	c.maxDownload = 10
 
 	var buf bytes.Buffer
-	if _, _, err := c.Download(context.Background(), server.URL, &buf); err == nil || !strings.Contains(err.Error(), "maximum size") {
+	if _, _, err := c.Download(context.Background(), "https://93.184.216.34/document.pdf", &buf); err == nil || !strings.Contains(err.Error(), "maximum size") {
 		t.Fatalf("expected a size-limit error, got %v", err)
 	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestReadErrorMessageRedactsSensitiveValues(t *testing.T) {

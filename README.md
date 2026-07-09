@@ -33,66 +33,47 @@ registry. **This README is for working on the collector itself.**
 ```bash
 make build   # build the binary
 make test    # go test -race ./...
-make test-dev # go test -tags dev ./...
 make lint    # golangci-lint (matches CI)
 ```
 
-## Running against loopback development endpoints
+## Running against custom endpoints
 
-For local end-to-end testing against a compatible non-production API on
-loopback, build the dev-tagged binary and point epack at it with `binary`.
-Release builds reject endpoint overrides; dev builds allow only HTTP or HTTPS
-endpoints whose host resolves entirely to loopback, with no userinfo, query
-string, or fragment.
-
-The simplest path is to supply a test token directly instead of relying on the
-brokered runtime credential:
-
-```bash
-make build-dev
-```
+For local end-to-end testing against a compatible non-production API, expose the
+API over HTTPS and point epack at the local binary. Custom endpoint URLs must
+not include userinfo, query strings, or fragments.
 
 ```yaml
 collectors:
   documents:
-    binary: "/absolute/path/to/epack-collector-documents-dev"
+    binary: "/absolute/path/to/epack-collector-documents"
     config:
-      insecure_endpoint: "http://127.0.0.1:3000"
+      insecure_endpoint: "https://api.example.test"
     secrets:
       - LOCKTIVITY_DOCUMENTS_TOKEN
 ```
 
 ```bash
-export LOCKTIVITY_DOCUMENTS_TOKEN="<test token accepted by the loopback API>"
+export LOCKTIVITY_DOCUMENTS_TOKEN="<test token accepted by the custom API>"
 epack lock && epack collect
 ```
-
-Download-URL SSRF checks are relaxed only in dev-tagged builds when
-`insecure_endpoint` is plain HTTP and resolves entirely to loopback. Release
-builds, HTTPS loopback endpoints, and non-loopback endpoints keep those checks
-enforced.
 
 To exercise the client-credentials path instead, omit
 `LOCKTIVITY_DOCUMENTS_TOKEN`, supply `LOCKTIVITY_CLIENT_ID` and
 `LOCKTIVITY_CLIENT_SECRET`, set `pipeline_id`, and point the exchange at a
-loopback auth endpoint:
+trusted HTTPS auth endpoint:
 
 ```yaml
 collectors:
   documents:
-    binary: "/absolute/path/to/epack-collector-documents-dev"
+    binary: "/absolute/path/to/epack-collector-documents"
     config:
       pipeline_id: "<pipeline id>"
-      insecure_endpoint: "http://127.0.0.1:3000"
-      insecure_auth_endpoint: "http://127.0.0.1:3001"
+      insecure_endpoint: "https://api.example.test"
+      insecure_auth_endpoint: "https://app.example.test"
     secrets:
       - LOCKTIVITY_CLIENT_ID
       - LOCKTIVITY_CLIENT_SECRET
 ```
-
-Custom auth endpoints follow the same dev-build loopback restriction. Plain
-HTTP should only be used for local loopback testing because the token exchange
-sends the client secret.
 
 ## Releasing
 

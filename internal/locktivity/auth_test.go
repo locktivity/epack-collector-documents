@@ -52,11 +52,10 @@ func TestExchangeClientCredentials(t *testing.T) {
 	}
 }
 
-func TestExchangeClientCredentialsRefusesPlaintextRemote(t *testing.T) {
-	// TEST-NET is parsed as non-loopback before any request is made.
+func TestExchangeClientCredentialsRefusesPlaintext(t *testing.T) {
 	_, err := ExchangeClientCredentials(context.Background(), "http://192.0.2.10:9", "id", "secret")
-	if err == nil || !strings.Contains(err.Error(), "loopback") {
-		t.Fatalf("expected plaintext remote refusal, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "must use HTTPS") {
+		t.Fatalf("expected plaintext refusal, got %v", err)
 	}
 }
 

@@ -73,6 +73,28 @@ In GitHub Actions, skip this step: keep `GITHUB_RUN_ID` and
 |--------|----------|-------------|
 | `pipeline_id` | In your own CI | Which pipeline's document selection to include. On a Locktivity-managed pipeline the token already identifies the pipeline, so this is omitted; with client credentials it is required, and Locktivity fills it in when it generates the configuration. |
 | `run_key` | No | Groups retries of the same run. On a Locktivity-managed pipeline this comes from the workflow run's verified identity automatically; in your own CI, export `LOCKTIVITY_RUN_KEY` per run instead. Set this option directly only for one-off runs outside any CI. |
+| `insecure_endpoint` | No | Advanced HTTPS endpoint override for the documents API. The `insecure_` name is an explicit acknowledgement that API traffic is redirected away from the default endpoint. |
+| `insecure_auth_endpoint` | No | Advanced HTTPS endpoint override for the client-credentials token exchange. Use only a trusted endpoint; the collector sends `LOCKTIVITY_CLIENT_SECRET` there. |
+
+### Advanced Endpoint Overrides
+
+Endpoint overrides redirect API traffic away from the default Locktivity
+service. Use them only with endpoints you control or explicitly trust.
+Custom endpoint URLs must not include userinfo, query strings, or fragments.
+Plain HTTP endpoint overrides are always rejected.
+
+```yaml
+collectors:
+  documents:
+    source: locktivity/epack-collector-documents@^0.1
+    config:
+      pipeline_id: "<pipeline-id>"
+      insecure_endpoint: "https://api.example.com"
+      insecure_auth_endpoint: "https://app.example.com"
+    secrets:
+      - LOCKTIVITY_CLIENT_ID
+      - LOCKTIVITY_CLIENT_SECRET
+```
 
 ## Environment Variables
 

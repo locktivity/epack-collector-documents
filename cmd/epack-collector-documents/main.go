@@ -59,7 +59,7 @@ func run(ctx componentsdk.CollectorContext) error {
 		return err
 	}
 
-	client := locktivity.NewClient(runtime.Endpoint.BaseURL, runtime.Token, Version, runtime.Endpoint.AllowInsecureDownloads)
+	client := locktivity.NewClient(runtime.Endpoint.BaseURL, runtime.Token, Version)
 	output, err := collector.Collect(ctx.Context(), collector.Config{
 		PipelineID: runtime.PipelineID,
 		RunKey:     runtime.RunKey,

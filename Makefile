@@ -1,4 +1,4 @@
-.PHONY: build build-dev build-all test test-dev lint lint-forbidden-data clean sdk-test sdk-run
+.PHONY: build build-all test lint lint-forbidden-data clean sdk-test sdk-run
 
 BINARY_NAME := epack-collector-documents
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -7,10 +7,6 @@ COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 # Build the collector binary for the current platform
 build:
 	go build -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)" -o $(BINARY_NAME) ./cmd/$(BINARY_NAME)
-
-# Build a local-development binary that permits plain HTTP loopback endpoints.
-build-dev:
-	go build -tags dev -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)" -o $(BINARY_NAME)-dev ./cmd/$(BINARY_NAME)
 
 # Build for all platforms
 build-all:
@@ -22,9 +18,6 @@ build-all:
 # Run tests
 test:
 	go test -race -v ./...
-
-test-dev:
-	go test -tags dev -v ./...
 
 # Lint code (downloads golangci-lint binary to match CI)
 GOLANGCI_LINT_VERSION := v2.9.0

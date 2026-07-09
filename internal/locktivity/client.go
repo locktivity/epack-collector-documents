@@ -75,26 +75,24 @@ type Document struct {
 
 // Client talks to the Locktivity management API.
 type Client struct {
-	apiClient              *http.Client
-	downloadClient         *http.Client
-	baseURL                string
-	token                  string
-	userAgent              string
-	allowInsecureDownloads bool
-	maxDownload            int64
+	apiClient      *http.Client
+	downloadClient *http.Client
+	baseURL        string
+	token          string
+	userAgent      string
+	maxDownload    int64
 }
 
-func NewClient(baseURL, token, version string, allowInsecureDownloads bool) *Client {
+func NewClient(baseURL, token, version string) *Client {
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
 	baseURL = strings.TrimRight(baseURL, "/")
 	c := &Client{
-		baseURL:                baseURL,
-		token:                  token,
-		userAgent:              "epack-collector-documents/" + version,
-		allowInsecureDownloads: allowInsecureDownloads,
-		maxDownload:            limits.DownloadBytes,
+		baseURL:     baseURL,
+		token:       token,
+		userAgent:   "epack-collector-documents/" + version,
+		maxDownload: limits.DownloadBytes,
 	}
 	// Per-call deadlines keep large downloads from consuming the API timeout.
 	c.apiClient = &http.Client{}
@@ -108,9 +106,6 @@ func NewClient(baseURL, token, version string, allowInsecureDownloads bool) *Cli
 func (c *Client) downloadTransport() http.RoundTripper {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
-	if c.allowInsecureDownloads {
-		return transport
-	}
 	dialer := &net.Dialer{}
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(address)
@@ -147,9 +142,6 @@ func (c *Client) checkRedirect(req *http.Request, via []*http.Request) error {
 
 // validateFetchURL rejects non-HTTPS, credentialed, or non-public targets.
 func (c *Client) validateFetchURL(u *url.URL) error {
-	if c.allowInsecureDownloads {
-		return nil
-	}
 	if u.Scheme != "https" {
 		return fmt.Errorf("refusing non-https download URL")
 	}

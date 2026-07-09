@@ -19,9 +19,6 @@ jobs:
       - name: Run tests
         run: go test -race -v ./...
 
-      - name: Run dev-tag tests
-        run: go test -tags dev -v ./...
-
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -50,9 +47,6 @@ jobs:
 
       - name: Build
         run: go build -o epack-collector-documents ./cmd/epack-collector-documents
-
-      - name: Build dev binary
-        run: go build -tags dev -o epack-collector-documents-dev ./cmd/epack-collector-documents
 
       - name: Verify binary runs
         run: ./epack-collector-documents --version
