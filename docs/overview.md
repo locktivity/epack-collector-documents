@@ -23,8 +23,9 @@ plus one index:
 - **Document details**: what Locktivity found in the document. For a SOC 2
   report that includes the audit period, the auditor, and the report type,
   each with the passage it came from.
-- **Document index** (`artifacts/documents.json`): every document with its
-  name, source, and version, pointing to that document's files.
+- **Document index** (`artifacts/documents.document-index.json`): every
+  document with its name, source, and version, pointing to that document's
+  files.
 
 Each file is verified against its recorded checksum before it is packed.
 
@@ -44,7 +45,9 @@ Each file is verified against its recorded checksum before it is packed.
    get the identical set back.
 2. It downloads each document file and its extracted text over pre-signed
    URLs, and verifies every download against the checksum Locktivity
-   recorded. A mismatch fails the run rather than packing the file.
+   recorded. A document whose files cannot be downloaded or do not match
+   their checksums is left out of the pack rather than packed unverified, and
+   the other documents still ship.
 3. It writes each document's details file from the captured snapshot.
 4. Everything is staged into per-document folders, the index is built, and
    the output is wrapped in the epack collector protocol envelope.
@@ -53,7 +56,8 @@ Each file is verified against its recorded checksum before it is packed.
 
 ```
 artifacts/
-  documents.json                      # the index
+  documents.document-index.json       # the index
+  documents.collector-result.json     # what was left out and why
   documents/
     doc_4f2a9c/
       acme-soc2-2025.pdf              # the document, ready to open
@@ -70,15 +74,30 @@ Field-level schemas for the index and text artifacts live in
 
 ## Index Reference
 
-Each entry in `documents.json` describes one document:
+Each entry in the index describes one document:
 
 | Field | What It Tells You |
 |-------|-------------------|
 | `name`, `source`, `version_number` | Which document this is, where it lives, and which version shipped. |
 | `document_type` | What kind of document Locktivity recognized, such as a SOC 2 report or a penetration test. |
-| `file`, `source_file`, `text`, `metadata` | Where each of the document's files landed in the pack, with a digest for each downloaded file. `source_file` appears when the shipped file is a rendering of a linked source. |
+| `file`, `source_file`, `text`, `metadata` | Where each of the document's files landed in the pack, with a digest for each downloaded file. `source_file` is set when the shipped file is a rendering of a linked source. |
 | `warnings` | Anything incomplete: a document with no file yet, or text not extracted yet. |
 | `captured_at`, `run_key`, `digest` (top level) | When the document set was captured, the run it belongs to, and the integrity hash of the whole set. |
+
+A field that does not apply is `null` rather than missing: `file` for a
+document with no file yet, `source_file` for a document that is not a
+rendering, `version_number` when no version was identified. Missing file
+fields mean the collector left the document out (see below).
+
+## When a Document Can't Be Collected
+
+The run fails only when its configuration is invalid, Locktivity rejects its
+credentials, or the snapshot cannot be taken. A document whose files cannot be
+downloaded or fail verification is left out while the rest are included: its
+entry stays in the index with its name and source but without its file
+fields, and `artifacts/documents.collector-result.json` lists a gap for each
+of its files and fields, with a code such as `vendor_error` or
+`invalid_response`. The result also records the calls the collector made.
 
 ## What's Included
 

@@ -9,30 +9,42 @@
   "properties": {
     "snapshot_id": {
       "type": "string",
-      "description": "Locktivity snapshot identifier for this captured document set."
+      "description": "Locktivity snapshot identifier for this captured document set.",
+      "x-epack-label": "Snapshot ID",
+      "x-epack-summary": "Locktivity's identifier for the snapshot this index was built from."
     },
     "pipeline_id": {
       "type": "string",
-      "description": "Pipeline whose document selection was captured."
+      "description": "Pipeline whose document selection was captured.",
+      "x-epack-label": "Pipeline ID",
+      "x-epack-summary": "The pipeline whose documents the snapshot captured."
     },
     "run_key": {
       "type": "string",
-      "description": "Stable run identity used to make retries repeatable."
+      "description": "Stable run identity used to make retries repeatable.",
+      "x-epack-label": "Run key",
+      "x-epack-summary": "Identifies the run, so a retry of the run gets the same snapshot back."
     },
     "digest": {
       "type": "string",
-      "description": "Server-provided digest of the captured snapshot manifest."
+      "description": "Server-provided digest of the captured snapshot manifest.",
+      "x-epack-label": "Snapshot digest",
+      "x-epack-summary": "Digest of the snapshot's manifest, as Locktivity recorded it."
     },
     "captured_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Timestamp when Locktivity captured the snapshot."
+      "description": "Timestamp when Locktivity captured the snapshot.",
+      "x-epack-label": "Captured at",
+      "x-epack-summary": "When the snapshot of the library was captured."
     },
     "documents": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/Document"
-      }
+      },
+      "x-epack-label": "Documents",
+      "x-epack-summary": "One entry for each document in the snapshot, including documents with no file yet."
     }
   },
   "$defs": {
@@ -44,44 +56,75 @@
         "document_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Stable document identifier from Locktivity."
+          "description": "Stable document identifier from Locktivity.",
+          "x-epack-label": "Document ID",
+          "x-epack-summary": "Locktivity's identifier for the document. The document's files sit in a folder with this name."
         },
         "name": {
           "type": "string",
-          "description": "Human-readable document name."
+          "description": "Human-readable document name.",
+          "x-epack-label": "Name",
+          "x-epack-summary": "The document's name in the library."
         },
         "source": {
           "type": "string",
-          "description": "Where the document came from, such as an upload or connected source."
+          "description": "Where the document came from, such as an upload or connected source.",
+          "x-epack-label": "Source",
+          "x-epack-summary": "Where the document came from, such as an upload or a file linked from GitHub or Google Drive."
         },
         "warnings": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Document-specific warnings, such as a selected document with no file yet."
+          "description": "Document-specific warnings, such as a selected document with no file yet.",
+          "x-epack-label": "Warnings",
+          "x-epack-summary": "Notices about this document, such as that it has no file yet or that its text is incomplete."
         },
         "version_number": {
-          "type": "integer",
+          "type": ["integer", "null"],
           "minimum": 0,
-          "description": "Locktivity document version number, when the snapshot identified a version."
+          "description": "Locktivity document version number.",
+          "x-epack-label": "Version",
+          "x-epack-summary": "The version of the document captured in this pack.",
+          "x-epack-method": "Copies the document's version number from the snapshot. It is null when the snapshot has no version for the document.",
+          "x-epack-null": "The snapshot did not identify a version of the document."
         },
         "document_type": {
-          "type": "string",
+          "type": ["string", "null"],
           "pattern": "^evidencepack/[a-z0-9._-]+@v[0-9]+$",
-          "description": "Typed metadata schema emitted for this document."
+          "description": "Typed metadata schema Locktivity recognized for this document.",
+          "x-epack-label": "Type",
+          "x-epack-summary": "The document's type, given as the schema ID of its metadata file, such as evidencepack/soc2-report@v1 for a SOC 2 report.",
+          "x-epack-null": "Locktivity has not recognized a document type."
         },
         "file": {
-          "$ref": "#/$defs/FilePointer"
+          "anyOf": [{ "$ref": "#/$defs/FilePointer" }, { "type": "null" }],
+          "description": "The document's shipped file. Absent when the collector could not download and verify the document's files. The collector result records why.",
+          "x-epack-label": "File",
+          "x-epack-summary": "The document's file in the pack. For a linked document, this is the rendering of its source file.",
+          "x-epack-null": "The document has no file in Locktivity yet."
         },
         "source_file": {
-          "$ref": "#/$defs/FilePointer"
+          "anyOf": [{ "$ref": "#/$defs/FilePointer" }, { "type": "null" }],
+          "description": "The native source file when the shipped file is a rendering of a linked source. Absent when the collector could not download and verify the document's files.",
+          "x-epack-label": "Source file",
+          "x-epack-summary": "The native file a linked document was rendered from, such as a Markdown file from GitHub.",
+          "x-epack-null": "The shipped file is not a rendering of a linked source, or the document has no file yet."
         },
         "text": {
-          "$ref": "#/$defs/TextPointer"
+          "anyOf": [{ "$ref": "#/$defs/TextPointer" }, { "type": "null" }],
+          "description": "The extracted text artifact. Absent when the collector could not download and verify the document's files.",
+          "x-epack-label": "Extracted text",
+          "x-epack-summary": "The file of text extracted from the document, in chunks by page or by row.",
+          "x-epack-null": "Locktivity has no extracted text for this version, or the document has no file yet."
         },
         "metadata": {
-          "$ref": "#/$defs/MetadataPointer"
+          "anyOf": [{ "$ref": "#/$defs/MetadataPointer" }, { "type": "null" }],
+          "description": "The typed metadata artifact. Absent when the collector could not download and verify the document's files.",
+          "x-epack-label": "Metadata",
+          "x-epack-summary": "The file of typed details for the document, such as a SOC 2 report's auditor and period.",
+          "x-epack-null": "Locktivity has no typed details for this document, or the document has no file yet."
         }
       }
     },
@@ -92,20 +135,29 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^artifacts/documents/[^/]+/.+$",
-          "description": "Pack-local path to the staged document file."
+          "pattern": "^artifacts/[a-z0-9][a-z0-9._-]*/[^/]+/.+$",
+          "description": "Pack-local path to the staged document file, in the run's folder. That is artifacts/documents/ unless the run is configured under another name.",
+          "x-epack-label": "Path",
+          "x-epack-summary": "Where the file sits in the pack."
         },
         "digest": {
-          "$ref": "#/$defs/SHA256Digest"
+          "$ref": "#/$defs/SHA256Digest",
+          "x-epack-label": "Digest",
+          "x-epack-summary": "SHA-256 digest of the file, checked against the snapshot's checksum."
         },
         "content_type": {
           "type": "string",
-          "description": "Server-provided content type for the staged document file."
+          "description": "Server-provided content type for the staged document file.",
+          "x-epack-label": "Content type",
+          "x-epack-summary": "The file's content type, as Locktivity recorded it."
         },
         "byte_size": {
           "type": "integer",
           "minimum": 0,
-          "description": "Server-provided byte size for the staged document file."
+          "description": "Server-provided byte size for the staged document file.",
+          "x-epack-label": "Size in bytes",
+          "x-epack-summary": "The file's size in bytes, as Locktivity recorded it.",
+          "x-epack-method": "Copies the file's size from the snapshot. A shipped file with no size in the snapshot gets the native file's size."
         }
       }
     },
@@ -116,11 +168,15 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^artifacts/documents/[^/]+/text\\.json$",
-          "description": "Pack-local path to the extracted text artifact."
+          "pattern": "^artifacts/[a-z0-9][a-z0-9._-]*/[^/]+/text\\.json$",
+          "description": "Pack-local path to the extracted text artifact, in the run's folder. That is artifacts/documents/ unless the run is configured under another name.",
+          "x-epack-label": "Path",
+          "x-epack-summary": "Where the text file sits in the pack."
         },
         "digest": {
-          "$ref": "#/$defs/SHA256Digest"
+          "$ref": "#/$defs/SHA256Digest",
+          "x-epack-label": "Digest",
+          "x-epack-summary": "SHA-256 digest of the text file, checked against the snapshot's checksum."
         }
       }
     },
@@ -131,8 +187,10 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^artifacts/documents/[^/]+/metadata\\.json$",
-          "description": "Pack-local path to the typed metadata artifact."
+          "pattern": "^artifacts/[a-z0-9][a-z0-9._-]*/[^/]+/metadata\\.json$",
+          "description": "Pack-local path to the typed metadata artifact, in the run's folder. That is artifacts/documents/ unless the run is configured under another name.",
+          "x-epack-label": "Path",
+          "x-epack-summary": "Where the metadata file sits in the pack."
         }
       }
     },

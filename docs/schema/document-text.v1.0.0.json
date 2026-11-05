@@ -8,14 +8,18 @@
   "properties": {
     "document_id": {
       "type": "string",
-      "description": "Document identifier when included by the text extraction service."
+      "description": "Document identifier when included by the text extraction service.",
+      "x-epack-label": "Document ID",
+      "x-epack-summary": "Locktivity's identifier for the document the text came from."
     },
     "chunks": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/TextChunk"
       },
-      "description": "Ordered text chunks extracted from the document."
+      "description": "Ordered text chunks extracted from the document.",
+      "x-epack-label": "Text chunks",
+      "x-epack-summary": "The document's text in the order it was extracted."
     }
   },
   "additionalProperties": true,
@@ -27,25 +31,35 @@
         "chunk_id": {
           "type": "integer",
           "minimum": 0,
-          "description": "Stable chunk index within the extracted text artifact."
+          "description": "Stable chunk index within the extracted text artifact.",
+          "x-epack-label": "Chunk number",
+          "x-epack-summary": "The chunk's position in the extracted text, counting from 0."
         },
         "page": {
           "type": "integer",
           "minimum": 1,
-          "description": "One-based page number when the source document has pages."
+          "description": "One-based page number when the source document has pages.",
+          "x-epack-label": "Page",
+          "x-epack-summary": "The page the chunk comes from, counting from 1."
         },
         "sheet": {
           "type": "string",
-          "description": "Sheet name when the source document is a spreadsheet."
+          "description": "Sheet name when the source document is a spreadsheet.",
+          "x-epack-label": "Sheet",
+          "x-epack-summary": "The spreadsheet sheet the chunk comes from."
         },
         "row": {
           "type": "integer",
           "minimum": 1,
-          "description": "One-based row number when the source document is a spreadsheet."
+          "description": "One-based row number when the source document is a spreadsheet.",
+          "x-epack-label": "Row",
+          "x-epack-summary": "The spreadsheet row the chunk comes from, counting from 1."
         },
         "text": {
           "type": "string",
-          "description": "Extracted text for this chunk."
+          "description": "Extracted text for this chunk.",
+          "x-epack-label": "Text",
+          "x-epack-summary": "The chunk's extracted text."
         }
       },
       "additionalProperties": true

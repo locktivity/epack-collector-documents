@@ -3,8 +3,8 @@
 An [epack](https://github.com/locktivity/epack) collector that adds an
 account's Locktivity evidence documents to evidence packs. It fetches the
 document snapshot Locktivity captures for a pipeline run, verifies each file
-against its checksum, and writes the files plus a `documents.json` manifest
-into the pack.
+against its checksum, and writes the files plus an index at
+`artifacts/documents.document-index.json` into the pack.
 
 End-user documentation (what the collector does, how to configure it, and
 examples) lives in [`docs/`](docs/) and is published to the collector
@@ -12,27 +12,31 @@ registry. **This README is for working on the collector itself.**
 
 ## Layout
 
-- `cmd/epack-collector-documents`: entry point: parses config, resolves the
-  run key, classifies errors for the SDK, and wires staged artifacts into the
-  emitted pack.
-- `internal/collector`: collection orchestration, document artifact path
-  layout, download + checksum verification, metadata artifact assembly, and
-  staging of files for the pack.
-- `internal/limits`: shared timeout, retry, size, redirect, and checksum
-  limits. Security-sensitive bounds should live here instead of being scattered
+- `cmd/epack-collector-documents`: entry point: runs the spec and handler from
+  `internal/collector` with `componentsdk.RunCollector`.
+- `internal/collector`: the handler (config, credentials, run key, staging
+  check), collection orchestration, document artifact path layout, download +
+  checksum verification, metadata artifact assembly, and staging of files for
+  the pack. A document that cannot be downloaded and verified is left out with
+  gaps in the collector result rather than failing the run.
+- `internal/limits`: shared timeout, size, redirect, and checksum limits.
+  Security-sensitive bounds should live here instead of being scattered
   through the codebase.
-- `internal/locktivity`: HTTP client for the management API: token exchange,
-  endpoint policy, snapshot requests, and SSRF-guarded, size-bounded file
-  downloads.
+- `internal/locktivity`: HTTP clients built on `componentsdk.NewHTTPClient`:
+  token exchange, endpoint policy, snapshot requests, and SSRF-guarded,
+  size-bounded file downloads. The SSRF guard is the download client's base
+  transport. `collectortest` runs replace that transport, so the guard has
+  tests of its own that call it directly.
 - `internal/redact`: shared redaction helpers for server error messages and
   untrusted metadata/provenance before they enter logs or emitted artifacts.
-- `docs/schema`: JSON Schema contracts for collector-owned artifacts.
+- `docs/schema`: JSON Schema contracts for collector-owned artifacts, embedded
+  so the SDK checks the index against its schema when the collector emits.
 
 ## Building and testing
 
 ```bash
 make build   # build the binary
-make test    # go test -race ./...
+make test    # go test -race ./..., including the collectortest suite
 make lint    # golangci-lint (matches CI)
 ```
 

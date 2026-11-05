@@ -1,0 +1,1665 @@
+{
+  "artifacts": {
+    "artifacts/documents.document-index.json": {
+      "/captured_at": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:488"
+          }
+        ]
+      },
+      "/digest": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:487"
+          }
+        ]
+      },
+      "/documents": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:489"
+          }
+        ]
+      },
+      "/documents/*/document_id": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:468"
+          }
+        ]
+      },
+      "/documents/*/document_type": {
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:476"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:477"
+          }
+        ]
+      },
+      "/documents/*/file": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:292"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:296"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:346"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:350"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:419"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:34"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/file/byte_size": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:354"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:368"
+          },
+          {
+            "role": "helper",
+            "line": "internal/collector/collector.go:455",
+            "end": 460
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/file/content_type": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:353"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:367"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/file/digest": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:292"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:296"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:346"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:352"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:359"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:366"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:34"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:35"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/file/path": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:351"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:365"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/metadata": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:306"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:307"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:357"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:363"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:372"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:373"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:375"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:378"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:382"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:383"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:384"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:385"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:390"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:391"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:422"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:424"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:559"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:565"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:566"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:568"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:569"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:581"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:584"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/handler.go:46"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:47"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:52"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:56"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/handler.go:64"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/metadata/path": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:306"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:307"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:357"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:363"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:372"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:373"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:375"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:378"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:382"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:383"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:384"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:385"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:390"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:391"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:422"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:424"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:559"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:565"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:566"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:568"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:569"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:581"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:584"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/handler.go:46"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:47"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:52"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/handler.go:56"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/handler.go:64"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/name": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:469"
+          }
+        ]
+      },
+      "/documents/*/source": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:470"
+          }
+        ]
+      },
+      "/documents/*/source_file": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:359"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:364"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:420"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:35"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/source_file/byte_size": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:354"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:368"
+          },
+          {
+            "role": "helper",
+            "line": "internal/collector/collector.go:455",
+            "end": 460
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/source_file/content_type": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:353"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:367"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/source_file/digest": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:292"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:296"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:346"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:352"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:359"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:366"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:34"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:35"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/source_file/path": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:297"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:298"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:301"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:351"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:358"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:360"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:365"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/text": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:303"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:304"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:373"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:374"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:375"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:379"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:421"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:36"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/text/digest": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:303"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:304"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:335"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:373"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:374"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:375"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:379"
+          },
+          {
+            "role": "input",
+            "line": "internal/locktivity/client.go:36"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/text/path": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:293"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:303"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:304"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:337"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:340"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:347"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:373"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:375"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:379"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:515"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:519"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:520"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:526"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:532"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:536"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:543"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:544"
+          }
+        ],
+        "gaps": [
+          "internal/collector/collector.go:447"
+        ]
+      },
+      "/documents/*/version_number": {
+        "code": [
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:473"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:474"
+          }
+        ]
+      },
+      "/documents/*/warnings": {
+        "code": [
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:463"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:464"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:465"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:471"
+          }
+        ]
+      },
+      "/documents/*/warnings/*": {
+        "code": [
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:463"
+          },
+          {
+            "role": "condition",
+            "line": "internal/collector/collector.go:464"
+          },
+          {
+            "role": "input",
+            "line": "internal/collector/collector.go:465"
+          },
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:471"
+          }
+        ]
+      },
+      "/pipeline_id": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:485"
+          }
+        ]
+      },
+      "/run_key": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:486"
+          }
+        ]
+      },
+      "/snapshot_id": {
+        "code": [
+          {
+            "role": "assign",
+            "line": "internal/collector/collector.go:484"
+          }
+        ]
+      }
+    },
+    "artifacts/documents/doc_1/acme-soc2-2025.pdf": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_1/metadata.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_1/text.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_2/access-control-policy.md": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_2/access-control-policy.pdf": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_2/metadata.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_2/text.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_3/text.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_3/vendor-inventory.xlsx": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_texts.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_5/data-retention-policy.docx": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_5/data-retention-policy.pdf": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    },
+    "artifacts/documents/doc_5/metadata.json": {
+      "": {
+        "operations": [
+          "storage.document_files.get",
+          "storage.document_sources.get"
+        ],
+        "gaps": [
+          "internal/collector/collector.go:434"
+        ]
+      }
+    }
+  },
+  "lines": {
+    "internal/collector/collector.go:292": "\tfile, err := stagePath(doc)",
+    "internal/collector/collector.go:293": "\tif err != nil {",
+    "internal/collector/collector.go:296": "\tp := documentPlan{file: file}",
+    "internal/collector/collector.go:297": "\tif doc.SourceURL != \"\" { // LINT-ALLOW: branch only, fetch URL is never emitted",
+    "internal/collector/collector.go:298": "\t\tif doc.SourcePath == \"\" || filepath.IsAbs(doc.SourcePath) || !filepath.IsLocal(doc.SourcePath) {",
+    "internal/collector/collector.go:301": "\t\tp.source = documentArtifactRelPath(doc.DocumentID, filepath.Base(doc.SourcePath))",
+    "internal/collector/collector.go:303": "\tif doc.TextURL != \"\" { // LINT-ALLOW: branch only, fetch URL is never emitted",
+    "internal/collector/collector.go:304": "\t\tp.text = documentTextRelPath(doc.DocumentID)",
+    "internal/collector/collector.go:306": "\tif doc.DocumentType != \"\" {",
+    "internal/collector/collector.go:307": "\t\tp.metadata = documentMetadataRelPath(doc.DocumentID)",
+    "internal/collector/collector.go:335": "\tfetch := func(op componentsdk.Operation, url, relPath, expected, displayName, schema string) (StagedFile, string, error) {",
+    "internal/collector/collector.go:337": "\t\tif err != nil {",
+    "internal/collector/collector.go:340": "\t\tfile.PackPath = r.packPath(file.RelPath)",
+    "internal/collector/collector.go:346": "\tfile, digest, err := fetch(locktivity.FileDownload, doc.FileURL, plan.file, cmp.Or(doc.ArtifactChecksum, doc.Checksum), doc.Name, \"\") // LINT-ALLOW: download-only, fetch URL is never emitted",
+    "internal/collector/collector.go:347": "\tif err != nil {",
+    "internal/collector/collector.go:350": "\tout.file = \u0026DocumentFilePointer{",
+    "internal/collector/collector.go:351": "\t\tPath:        file.PackPath,",
+    "internal/collector/collector.go:352": "\t\tDigest:      \"sha256:\" + digest,",
+    "internal/collector/collector.go:353": "\t\tContentType: doc.ArtifactContentType,",
+    "internal/collector/collector.go:354": "\t\tByteSize:    artifactByteSize(doc),",
+    "internal/collector/collector.go:357": "\tvar sourcePackPath string",
+    "internal/collector/collector.go:358": "\tif plan.source != \"\" {",
+    "internal/collector/collector.go:359": "\t\tsource, digest, err := fetch(locktivity.SourceDownload, doc.SourceURL, plan.source, doc.Checksum, doc.Name+\" · Source\", \"\") // LINT-ALLOW: download-only, fetch URL is never emitted",
+    "internal/collector/collector.go:360": "\t\tif err != nil {",
+    "internal/collector/collector.go:363": "\t\tsourcePackPath = source.PackPath",
+    "internal/collector/collector.go:364": "\t\tout.sourceFile = \u0026DocumentFilePointer{",
+    "internal/collector/collector.go:365": "\t\t\tPath:        source.PackPath,",
+    "internal/collector/collector.go:366": "\t\t\tDigest:      \"sha256:\" + digest,",
+    "internal/collector/collector.go:367": "\t\t\tContentType: doc.ContentType,",
+    "internal/collector/collector.go:368": "\t\t\tByteSize:    doc.ByteSize,",
+    "internal/collector/collector.go:372": "\tvar textPackPath string",
+    "internal/collector/collector.go:373": "\tif plan.text != \"\" {",
+    "internal/collector/collector.go:374": "\t\ttext, digest, err := fetch(locktivity.TextDownload, doc.TextURL, plan.text, doc.TextChecksum, doc.Name+\" · Text\", DocumentTextSchema) // LINT-ALLOW: download-only, fetch URL is never emitted",
+    "internal/collector/collector.go:375": "\t\tif err != nil {",
+    "internal/collector/collector.go:378": "\t\ttextPackPath = text.PackPath",
+    "internal/collector/collector.go:379": "\t\tout.text = \u0026DocumentTextPointer{Path: text.PackPath, Digest: \"sha256:\" + digest}",
+    "internal/collector/collector.go:382": "\tif plan.metadata != \"\" {",
+    "internal/collector/collector.go:383": "\t\tmetadata := metadataArtifact(doc, file.PackPath, sourcePackPath, textPackPath)",
+    "internal/collector/collector.go:384": "\t\tname, filename, err := stageJSON(r.cfg.Stager, plan.metadata, metadata.Body)",
+    "internal/collector/collector.go:385": "\t\tif err != nil {",
+    "internal/collector/collector.go:390": "\t\tmetadata.PackPath = r.packPath(name)",
+    "internal/collector/collector.go:391": "\t\tout.metadata = \u0026metadata",
+    "internal/collector/collector.go:419": "\tentry.File = staged.file",
+    "internal/collector/collector.go:420": "\tentry.SourceFile = staged.sourceFile",
+    "internal/collector/collector.go:421": "\tentry.Text = staged.text",
+    "internal/collector/collector.go:422": "\tif staged.metadata != nil {",
+    "internal/collector/collector.go:424": "\t\tentry.Metadata = \u0026DocumentMetadataPointer{Path: staged.metadata.PackPath}",
+    "internal/collector/collector.go:434": "\t\tr.cfg.Recorder.NotCollected(componentsdk.Location{Path: r.packPath(rel)}, err)",
+    "internal/collector/collector.go:447": "\t\tr.cfg.Recorder.NotCollected(componentsdk.Location{",
+    "internal/collector/collector.go:455": "func artifactByteSize(doc locktivity.Document) int64 {",
+    "internal/collector/collector.go:456": "\tif doc.ArtifactByteSize \u003e 0 {",
+    "internal/collector/collector.go:457": "\t\treturn doc.ArtifactByteSize",
+    "internal/collector/collector.go:458": "\t}",
+    "internal/collector/collector.go:459": "\treturn doc.ByteSize",
+    "internal/collector/collector.go:460": "}",
+    "internal/collector/collector.go:463": "\twarnings := doc.Warnings",
+    "internal/collector/collector.go:464": "\tif warnings == nil {",
+    "internal/collector/collector.go:465": "\t\twarnings = []string{}",
+    "internal/collector/collector.go:468": "\t\tDocumentID: doc.DocumentID,",
+    "internal/collector/collector.go:469": "\t\tName:       doc.Name,",
+    "internal/collector/collector.go:470": "\t\tSource:     doc.Source,",
+    "internal/collector/collector.go:471": "\t\tWarnings:   warnings,",
+    "internal/collector/collector.go:473": "\tif doc.VersionID != \"\" {",
+    "internal/collector/collector.go:474": "\t\tentry.VersionNumber = \u0026doc.VersionNumber",
+    "internal/collector/collector.go:476": "\tif doc.DocumentType != \"\" {",
+    "internal/collector/collector.go:477": "\t\tentry.DocumentType = \u0026doc.DocumentType",
+    "internal/collector/collector.go:484": "\t\tSnapshotID: snapshot.ID,",
+    "internal/collector/collector.go:485": "\t\tPipelineID: snapshot.PipelineID,",
+    "internal/collector/collector.go:486": "\t\tRunKey:     snapshot.RunKey,",
+    "internal/collector/collector.go:487": "\t\tDigest:     snapshot.Digest,",
+    "internal/collector/collector.go:488": "\t\tCapturedAt: snapshot.CapturedAt,",
+    "internal/collector/collector.go:489": "\t\tDocuments:  documents,",
+    "internal/collector/collector.go:515": "\tif len(expected) != limits.SHA256HexChars {",
+    "internal/collector/collector.go:519": "\tfile, name, err := stager.StageFile(relPath)",
+    "internal/collector/collector.go:520": "\tif err != nil {",
+    "internal/collector/collector.go:526": "\tif err != nil {",
+    "internal/collector/collector.go:532": "\tif closeErr != nil {",
+    "internal/collector/collector.go:536": "\tif digest != expected {",
+    "internal/collector/collector.go:543": "\t\tRelPath:     name,",
+    "internal/collector/collector.go:544": "\t\tPackPath:    artifactPackPath(name),",
+    "internal/collector/collector.go:559": "\tbody := map[string]any{",
+    "internal/collector/collector.go:565": "\tif sourcePackPath != \"\" {",
+    "internal/collector/collector.go:566": "\t\tbody[\"source_path\"] = sourcePackPath",
+    "internal/collector/collector.go:568": "\tif textPackPath != \"\" {",
+    "internal/collector/collector.go:569": "\t\tbody[\"text_path\"] = textPackPath",
+    "internal/collector/collector.go:581": "\t\tPackPath:    artifactPackPath(documentMetadataRelPath(doc.DocumentID)),",
+    "internal/collector/collector.go:584": "\t\tBody:        body,",
+    "internal/collector/handler.go:46": "\tstaging, ok := componentsdk.Staging(ctx)",
+    "internal/collector/handler.go:47": "\tif !ok || staging.OutputDir() == \"\" {",
+    "internal/collector/handler.go:52": "\tif err != nil {",
+    "internal/collector/handler.go:56": "\tif err != nil {",
+    "internal/collector/handler.go:64": "\t\tStager:     staging,",
+    "internal/locktivity/client.go:34": "\tFileDownload   = componentsdk.Operation{Name: \"storage.document_files.get\"}",
+    "internal/locktivity/client.go:35": "\tSourceDownload = componentsdk.Operation{Name: \"storage.document_sources.get\"}",
+    "internal/locktivity/client.go:36": "\tTextDownload   = componentsdk.Operation{Name: \"storage.document_texts.get\"}"
+  }
+}
