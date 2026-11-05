@@ -13,34 +13,7 @@ permissions: read-all
 jobs:
   # Run tests and conformance checks before building
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: go test -race ./...
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.9.0
-
-      - name: Forbidden-data check
-        run: make lint-forbidden-data
-
-      - name: Build
-        run: go build -o epack-collector-documents ./cmd/epack-collector-documents
-
-      - name: Run conformance tests
-        run: |
-          EPACK_VERSION="$(go list -m -f '{{.Version}}' github.com/locktivity/epack)"
-          echo "Installing epack-conformance at ${EPACK_VERSION}"
-          go install -tags conformance github.com/locktivity/epack/cmd/epack-conformance@"${EPACK_VERSION}"
-          epack-conformance collector ./epack-collector-documents --level standard
+    uses: ./.github/workflows/ci.yaml
 
   # Compute build arguments (version)
   args:

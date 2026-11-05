@@ -108,16 +108,31 @@ collectors:
 
 ## Troubleshooting
 
+### Exit codes
+
+| Exit | Code | When |
+|------|------|------|
+| 0 | | The run collected, even if some documents were left out |
+| 1 | `invalid_response` | Locktivity's answer to the token or snapshot request was not what the collector expects |
+| 1 | `too_large` | The snapshot from Locktivity is over the collector's 32 MB limit |
+| 2 | `config_invalid` | No credentials, no `pipeline_id` with client credentials, an endpoint override that is not HTTPS, an epack too old for file artifacts, a pipeline without the Documents collector, or an account without the Documents feature or the pipeline |
+| 3 | `auth_failed` | Locktivity rejected the token or the client credentials |
+| 3 | `permission_denied` | The credential lacks the **Collect documents** permission |
+| 4 | `rate_limited`, `vendor_error`, `timeout` | Locktivity or its token endpoint could not be reached or kept failing |
+
 ### A configuration error asking you to upgrade on startup
 
 Your epack is older than v0.2.0. Upgrade it.
 
 ### An authentication error
 
-The token was missing or rejected. On a managed pipeline, check the pipeline's
-Documents credential in Locktivity. In your own CI, check
-`LOCKTIVITY_CLIENT_ID` and `LOCKTIVITY_CLIENT_SECRET` and the application's
-**Collect documents** permission.
+Locktivity rejected the token or the client credentials (`auth_failed`), or
+the credential lacks the snapshot permission (`permission_denied`). Both exit
+with code 3. On a managed pipeline, check the pipeline's Documents credential
+in Locktivity. In your own CI, check `LOCKTIVITY_CLIENT_ID` and
+`LOCKTIVITY_CLIENT_SECRET` and the application's **Collect documents**
+permission. Missing credentials are a configuration error instead, with exit
+code 2.
 
 ### "pipeline has no documents collector"
 
@@ -126,12 +141,20 @@ it in the pipeline's collectors step.
 
 ### A checksum mismatch
 
-A downloaded document didn't match what Locktivity recorded. The run fails on
-purpose; re-run, and contact support if it persists rather than bypassing the
-check.
+A downloaded document didn't match what Locktivity recorded. The collector
+leaves that document out of the pack, records an `invalid_response` gap for it
+in `artifacts/documents.collector-result.json`, and includes the rest. Re-run,
+and contact support if it persists rather than bypassing the check.
 
 ### A document is missing from the pack
 
 A document that has no file uploaded yet doesn't fail the run: it's listed in
-`documents.json` with a warning and named in the run summary. Upload a file
-for it in Locktivity and the next run includes it.
+`artifacts/documents.document-index.json` with `file` set to `null` and a
+warning, and named in the run summary. Upload a file for it in Locktivity and
+the next run includes it.
+
+A document whose files could not be downloaded is listed without its file
+fields, and `artifacts/documents.collector-result.json` has a gap for each
+with the reason, such as `vendor_error` when the download kept failing. A
+file over 100 MB is left out with a `too_large` gap, since a pack holds at
+most 100 MB per file.

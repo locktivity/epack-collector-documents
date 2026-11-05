@@ -13,12 +13,6 @@ const (
 	// DownloadTimeout bounds a single document file or text download.
 	DownloadTimeout = 5 * time.Minute
 
-	// SnapshotCreateAttempts limits snapshot creation retries.
-	SnapshotCreateAttempts = 3
-
-	// SnapshotRetryBackoffStep is multiplied by the retry attempt.
-	SnapshotRetryBackoffStep = 2 * time.Second
-
 	// DownloadRedirects limits file download redirect hops.
 	DownloadRedirects = 5
 
@@ -37,8 +31,3 @@ const (
 	// SHA256HexChars is the length of a SHA-256 digest in lowercase hex.
 	SHA256HexChars = 64
 )
-
-// SnapshotRetryDelay returns the delay before a retry attempt.
-func SnapshotRetryDelay(attempt int) time.Duration {
-	return time.Duration(attempt-1) * SnapshotRetryBackoffStep
-}

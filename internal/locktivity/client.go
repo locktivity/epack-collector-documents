@@ -14,22 +14,27 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/locktivity/epack-collector-documents/internal/limits"
 	"github.com/locktivity/epack-collector-documents/internal/redact"
+	"github.com/locktivity/epack/componentsdk"
 )
 
 // DefaultBaseURL is the production API endpoint.
 const DefaultBaseURL = "https://api.locktivity.com"
 
-// ErrUnauthorized indicates the access token was rejected.
-var ErrUnauthorized = errors.New("locktivity rejected the access token")
+const snapshotsPath = "/management/v1/evidence_packs/document_snapshots"
 
-// ConfigError indicates a server-side configuration rejection.
-type ConfigError struct{ Message string }
+// OpCreateSnapshot names the snapshot request in the collector result.
+const OpCreateSnapshot = "locktivity.document_snapshots.create"
 
-func (e ConfigError) Error() string { return e.Message }
+// The downloads, named by which of a document's files each one fetches. They
+// go to the storage behind the snapshot's pre-signed URLs.
+var (
+	FileDownload   = componentsdk.Operation{Name: "storage.document_files.get"}
+	SourceDownload = componentsdk.Operation{Name: "storage.document_sources.get"}
+	TextDownload   = componentsdk.Operation{Name: "storage.document_texts.get"}
+)
 
 // Snapshot is a captured document snapshot manifest.
 type Snapshot struct {
@@ -73,17 +78,69 @@ type Document struct {
 	Provenance       map[string]any `json:"provenance"`
 }
 
-// Client talks to the Locktivity management API.
+// APIError is an error response from the Locktivity API.
+type APIError struct {
+	StatusCode int
+	Header     http.Header
+	// Code is the API's machine-readable error code, such as
+	// VALIDATION_ERROR.
+	Code    string
+	Message string
+}
+
+func newAPIError(resp *http.Response) *APIError {
+	message, code := readError(resp.Body)
+	return &APIError{StatusCode: resp.StatusCode, Header: resp.Header, Code: code, Message: message}
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("locktivity returned %d: %s", e.StatusCode, e.Message)
+}
+
+func (e *APIError) HTTPStatus() int         { return e.StatusCode }
+func (e *APIError) HTTPHeader() http.Header { return e.Header }
+func (e *APIError) VendorCode() string      { return e.Code }
+
+// CollectionCode reads a 422, which the API sends when the pipeline cannot
+// take a snapshot, such as one without the Documents collector. It also
+// reads a 404, which the API sends when the account has no Documents feature
+// or the pipeline is not in the account. Other errors go by their status.
+func (e *APIError) CollectionCode() componentsdk.Code {
+	switch e.StatusCode {
+	case http.StatusUnprocessableEntity, http.StatusNotFound:
+		return componentsdk.CodeConfigInvalid
+	}
+	return ""
+}
+
+// DownloadError is a download that did not answer 200.
+type DownloadError struct {
+	StatusCode int
+	Header     http.Header
+}
+
+func (e *DownloadError) Error() string {
+	return fmt.Sprintf("file download returned %d", e.StatusCode)
+}
+
+func (e *DownloadError) HTTPStatus() int         { return e.StatusCode }
+func (e *DownloadError) HTTPHeader() http.Header { return e.Header }
+
+// Client talks to the Locktivity management API and downloads the files a
+// snapshot lists.
 type Client struct {
 	apiClient      *http.Client
 	downloadClient *http.Client
 	baseURL        string
 	token          string
-	userAgent      string
 	maxDownload    int64
+	maxSnapshot    int64
 }
 
-func NewClient(baseURL, token, version string) *Client {
+// NewClient returns a client for the API at baseURL, or DefaultBaseURL when
+// baseURL is empty, that sends token with each API call. Downloads carry no
+// credentials and go out through downloadTransport.
+func NewClient(ctx componentsdk.CollectorContext, baseURL, token string) *Client {
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
@@ -91,19 +148,32 @@ func NewClient(baseURL, token, version string) *Client {
 	c := &Client{
 		baseURL:     baseURL,
 		token:       token,
-		userAgent:   "epack-collector-documents/" + version,
 		maxDownload: limits.DownloadBytes,
+		maxSnapshot: limits.SnapshotResponseBytes,
 	}
-	// Per-call deadlines keep large downloads from consuming the API timeout.
-	c.apiClient = &http.Client{}
-	c.downloadClient = &http.Client{
-		CheckRedirect: c.checkRedirect,
-		Transport:     c.downloadTransport(),
-	}
+	c.apiClient = componentsdk.NewHTTPClient(ctx, componentsdk.HTTPOptions{
+		CredentialHosts: []string{hostOf(baseURL)},
+	})
+	c.downloadClient = componentsdk.NewHTTPClient(ctx, componentsdk.HTTPOptions{
+		Base: downloadTransport(),
+	})
+	c.downloadClient.CheckRedirect = checkDownloadRedirect
 	return c
 }
 
-func (c *Client) downloadTransport() http.RoundTripper {
+func hostOf(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
+}
+
+// downloadTransport resolves each download host itself and dials only public
+// addresses, so neither a pre-signed URL nor a redirect can reach the
+// runner's network or a cloud metadata service. Unlike the default
+// transport it takes no proxy, since a proxy would dial on its behalf.
+func downloadTransport() *http.Transport {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	dialer := &net.Dialer{}
@@ -132,42 +202,47 @@ func (c *Client) downloadTransport() http.RoundTripper {
 	return transport
 }
 
-// checkRedirect re-applies the download URL guard to every hop.
-func (c *Client) checkRedirect(req *http.Request, via []*http.Request) error {
+// checkDownloadRedirect applies the download URL checks to every hop.
+func checkDownloadRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= limits.DownloadRedirects {
-		return fmt.Errorf("stopped after %d redirects", limits.DownloadRedirects)
+		return refused(fmt.Sprintf("stopped after %d redirects", limits.DownloadRedirects))
 	}
-	return c.validateFetchURL(req.URL)
+	return validateFetchURL(req.URL)
 }
 
-// validateFetchURL rejects non-HTTPS, credentialed, or non-public targets.
-func (c *Client) validateFetchURL(u *url.URL) error {
+// validateFetchURL rejects download URLs that are not HTTPS or that embed
+// credentials. downloadTransport checks the addresses each host resolves to.
+func validateFetchURL(u *url.URL) error {
 	if u.Scheme != "https" {
-		return fmt.Errorf("refusing non-https download URL")
+		return refused("refusing non-https download URL")
 	}
 	if u.User != nil {
-		return fmt.Errorf("refusing download URL with embedded credentials")
+		return refused("refusing download URL with embedded credentials")
 	}
-	ips, err := net.LookupIP(u.Hostname())
-	if err != nil {
-		return fmt.Errorf("resolving download host: %w", err)
-	}
-	return validateFetchIPs(ips)
+	return nil
 }
 
 func validateFetchIPs(ips []net.IP) error {
 	if len(ips) == 0 {
-		return fmt.Errorf("download host resolved to no addresses")
+		return refused("download host resolved to no addresses")
 	}
 	for _, ip := range ips {
 		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
 			ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
-			return fmt.Errorf("refusing download URL resolving to non-public address %s", ip)
+			return refused(fmt.Sprintf("refusing download URL resolving to non-public address %s", ip))
 		}
 	}
 	return nil
 }
 
+// refused is a download the snapshot asked for that the collector will not
+// make.
+func refused(message string) error {
+	return componentsdk.CodeError(componentsdk.CodeInvalidResponse, errors.New(message))
+}
+
+// CreateSnapshot captures the document snapshot for the run, or returns the
+// one already captured for runKey.
 func (c *Client) CreateSnapshot(ctx context.Context, pipelineID, runKey string) (*Snapshot, error) {
 	fields := map[string]string{"run_key": runKey}
 	if pipelineID != "" {
@@ -178,87 +253,79 @@ func (c *Client) CreateSnapshot(ctx context.Context, pipelineID, runKey string) 
 		return nil, fmt.Errorf("encoding snapshot request: %w", err)
 	}
 
-	var lastErr error
-	for attempt := 1; attempt <= limits.SnapshotCreateAttempts; attempt++ {
-		if attempt > 1 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(limits.SnapshotRetryDelay(attempt)):
-			}
-		}
-
-		snapshot, retryable, err := c.createSnapshotOnce(ctx, body)
-		if err == nil {
-			return snapshot, nil
-		}
-		if !retryable {
-			return nil, err
-		}
-		lastErr = err
-	}
-	return nil, lastErr
-}
-
-func (c *Client) createSnapshotOnce(ctx context.Context, body []byte) (*Snapshot, bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, limits.APIRequestTimeout)
 	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.baseURL+"/management/v1/evidence_packs/document_snapshots", bytes.NewReader(body))
+	// The run key makes the request idempotent: a retry gets back the
+	// snapshot the first attempt captured.
+	ctx = componentsdk.WithOperation(ctx, componentsdk.Operation{Name: OpCreateSnapshot, Safe: true})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+snapshotsPath, bytes.NewReader(body))
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", c.userAgent)
 
 	resp, err := c.apiClient.Do(req)
 	if err != nil {
-		return nil, true, fmt.Errorf("requesting snapshot: %w", err)
+		return nil, fmt.Errorf("requesting snapshot: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	switch {
-	case resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated:
-		var snapshot Snapshot
-		if err := json.NewDecoder(io.LimitReader(resp.Body, limits.SnapshotResponseBytes)).Decode(&snapshot); err != nil {
-			return nil, false, fmt.Errorf("decoding snapshot response: %w", err)
-		}
-		return &snapshot, false, nil
-	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
-		return nil, false, ErrUnauthorized
-	case resp.StatusCode == http.StatusUnprocessableEntity:
-		return nil, false, ConfigError{Message: readErrorMessage(resp.Body)}
-	case resp.StatusCode >= 500:
-		return nil, true, fmt.Errorf("locktivity returned %d", resp.StatusCode)
-	default:
-		return nil, false, fmt.Errorf("locktivity returned %d: %s", resp.StatusCode, readErrorMessage(resp.Body))
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return nil, newAPIError(resp)
 	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, c.maxSnapshot+1))
+	if err != nil {
+		return nil, fmt.Errorf("decoding snapshot response: %w", err)
+	}
+	if int64(len(raw)) > c.maxSnapshot {
+		return nil, componentsdk.CodeError(componentsdk.CodeTooLarge,
+			fmt.Errorf("snapshot response exceeds maximum size (%d bytes)", c.maxSnapshot))
+	}
+	var decoded struct {
+		Snapshot
+		// Documents shadows Snapshot.Documents, so a response without the
+		// list can be told from one whose list is empty.
+		Documents *[]Document `json:"documents"`
+	}
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return nil, fmt.Errorf("decoding snapshot response: %w", err)
+	}
+	if decoded.Documents == nil {
+		return nil, componentsdk.CodeError(componentsdk.CodeInvalidResponse, errors.New("snapshot response has no documents list"))
+	}
+	snapshot := decoded.Snapshot
+	snapshot.Documents = *decoded.Documents
+	return &snapshot, nil
 }
 
-// Download streams a guarded snapshot file and returns its digest and size.
-func (c *Client) Download(ctx context.Context, rawURL string, dst io.Writer) (string, int64, error) {
+// Download streams the file at rawURL, a pre-signed URL from the snapshot,
+// into dst and returns its SHA-256 digest and size. op names the call.
+// Errors never carry the URL, whose query grants access to the file.
+func (c *Client) Download(ctx context.Context, op componentsdk.Operation, rawURL string, dst io.Writer) (string, int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, limits.DownloadTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	req, err := http.NewRequestWithContext(componentsdk.WithOperation(ctx, op), http.MethodGet, rawURL, nil)
 	if err != nil {
+		return "", 0, refused("snapshot manifest has an unusable download URL")
+	}
+	if err := validateFetchURL(req.URL); err != nil {
 		return "", 0, err
 	}
-	if err := c.validateFetchURL(req.URL); err != nil {
-		return "", 0, err
-	}
-	req.Header.Set("User-Agent", c.userAgent)
 
 	resp, err := c.downloadClient.Do(req)
 	if err != nil {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
 		return "", 0, fmt.Errorf("downloading file: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", 0, fmt.Errorf("file download returned %d", resp.StatusCode)
+		return "", 0, &DownloadError{StatusCode: resp.StatusCode, Header: resp.Header}
 	}
 
 	hasher := sha256.New()
@@ -267,27 +334,31 @@ func (c *Client) Download(ctx context.Context, rawURL string, dst io.Writer) (st
 		return "", 0, fmt.Errorf("reading file body: %w", err)
 	}
 	if n > c.maxDownload {
-		return "", 0, fmt.Errorf("download exceeds maximum size (%d bytes)", c.maxDownload)
+		return "", 0, componentsdk.CodeError(componentsdk.CodeTooLarge,
+			fmt.Errorf("download exceeds maximum size (%d bytes)", c.maxDownload))
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), n, nil
 }
 
-func readErrorMessage(body io.Reader) string {
+// readError returns the redacted message and the error code of an API error
+// body.
+func readError(body io.Reader) (string, string) {
 	data, err := io.ReadAll(io.LimitReader(body, limits.ErrorResponseBytes))
 	if err != nil || len(data) == 0 {
-		return "no error details"
+		return "no error details", ""
 	}
 	var payload struct {
+		Code   string   `json:"code"`
 		Error  string   `json:"error"`
 		Errors []string `json:"errors"`
 	}
 	if json.Unmarshal(data, &payload) == nil {
-		if payload.Error != "" {
-			return redact.String(payload.Error)
-		}
-		if len(payload.Errors) > 0 {
-			return redact.String(payload.Errors[0])
+		switch {
+		case payload.Error != "":
+			return redact.String(payload.Error), payload.Code
+		case len(payload.Errors) > 0:
+			return redact.String(payload.Errors[0]), payload.Code
 		}
 	}
-	return redact.String(string(data))
+	return redact.String(string(data)), payload.Code
 }

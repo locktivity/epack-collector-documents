@@ -6,26 +6,32 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/locktivity/epack-collector-documents/internal/locktivity"
+	"github.com/locktivity/epack/componentsdk"
 )
 
 type fakeClient struct {
 	snapshot *locktivity.Snapshot
 	files    map[string][]byte
 	errs     map[string]error
+	ops      []string
 }
 
 func (f *fakeClient) CreateSnapshot(ctx context.Context, pipelineID, runKey string) (*locktivity.Snapshot, error) {
 	return f.snapshot, nil
 }
 
-func (f *fakeClient) Download(ctx context.Context, url string, dst io.Writer) (string, int64, error) {
+func (f *fakeClient) Download(ctx context.Context, op componentsdk.Operation, url string, dst io.Writer) (string, int64, error) {
+	f.ops = append(f.ops, op.Name)
 	content := f.files[url]
 	n, err := dst.Write(content)
 	if downloadErr := f.errs[url]; downloadErr != nil {
@@ -63,6 +69,55 @@ func snapshotWith(docs ...locktivity.Document) *locktivity.Snapshot {
 	}
 }
 
+// collect runs Collect with a temp-dir stager and returns its output, the
+// gaps it recorded, and the staging directory.
+func collect(t *testing.T, client *fakeClient) (*Output, []componentsdk.Gap, string) {
+	t.Helper()
+	outputDir := t.TempDir()
+	rec := &componentsdk.Recorder{}
+	output, err := Collect(context.Background(), Config{
+		RunKey:   "run-1",
+		Stager:   dirStager{dir: outputDir},
+		Recorder: rec,
+	}, client)
+	if err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+	return output, rec.Gaps(), outputDir
+}
+
+// expectLeftOut checks that the document at index kept its index entry
+// without the pointers to its files, and that each of those pointers has a
+// gap with code and a detail mentioning want.
+func expectLeftOut(t *testing.T, output *Output, gaps []componentsdk.Gap, index int, code componentsdk.Code, want string, pointers ...string) {
+	t.Helper()
+	raw, err := json.Marshal(output.Index.Documents[index])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, pointer := range pointers {
+		if _, ok := fields[pointer]; ok {
+			t.Errorf("left-out document still has %s: %s", pointer, raw)
+		}
+		found := false
+		for _, gap := range gaps {
+			if gap.Path == DocumentIndexPackPath && gap.Pointer == fmt.Sprintf("/documents/%d/%s", index, pointer) {
+				found = true
+				if gap.Code != code || !strings.Contains(gap.Detail, want) {
+					t.Errorf("gap at %s = %s %q, want %s mentioning %q", gap.Pointer, gap.Code, gap.Detail, code, want)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("no gap for /documents/%d/%s in %+v", index, pointer, gaps)
+		}
+	}
+}
+
 func TestCollectStagesVerifiedFiles(t *testing.T) {
 	pdf := []byte("%PDF-1.4 policy content")
 	client := &fakeClient{
@@ -80,13 +135,9 @@ func TestCollectStagesVerifiedFiles(t *testing.T) {
 		files: map[string][]byte{"https://files.example/policy": pdf},
 	}
 
-	outputDir := t.TempDir()
-	output, err := Collect(context.Background(), Config{
-		RunKey: "gha-42-1",
-		Stager: dirStager{dir: outputDir},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
+	output, gaps, outputDir := collect(t, client)
+	if len(gaps) != 0 {
+		t.Fatalf("unexpected gaps: %+v", gaps)
 	}
 
 	staged := output.Files[0]
@@ -102,6 +153,9 @@ func TestCollectStagesVerifiedFiles(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(outputDir, staged.RelPath))
 	if err != nil || string(got) != string(pdf) {
 		t.Errorf("staged file mismatch: %v", err)
+	}
+	if strings.Join(client.ops, ",") != locktivity.FileDownload.Name {
+		t.Errorf("download operations = %v", client.ops)
 	}
 }
 
@@ -120,12 +174,7 @@ func TestCollectIndexOmitsFileURLs(t *testing.T) {
 		files: map[string][]byte{"https://files.example/secret-signed-url": pdf},
 	}
 
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, _ := collect(t, client)
 
 	if output.Index.SnapshotID != "snap-1" || output.Index.Digest != "manifest-digest" {
 		t.Errorf("unexpected index metadata: %+v", output.Index)
@@ -167,13 +216,7 @@ func TestCollectStagesNativeSourceForRenderedDocuments(t *testing.T) {
 		},
 	}
 
-	outputDir := t.TempDir()
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: outputDir},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, outputDir := collect(t, client)
 
 	sourceFile := output.Files[1]
 	if sourceFile.RelPath != "documents/doc-1/access-control-policy.md" {
@@ -211,36 +254,59 @@ func TestCollectStagesNativeSourceForRenderedDocuments(t *testing.T) {
 	if metadata.Body["source_path"] != "artifacts/documents/doc-1/access-control-policy.md" {
 		t.Errorf("unexpected source back-ref: %v", metadata.Body["source_path"])
 	}
+	if strings.Join(client.ops, ",") != locktivity.FileDownload.Name+","+locktivity.SourceDownload.Name {
+		t.Errorf("download operations = %v", client.ops)
+	}
 }
 
-func TestCollectRejectsTamperedSource(t *testing.T) {
+func TestCollectLeavesOutATamperedSourceWithItsDocument(t *testing.T) {
 	rendered := []byte("%PDF-1.4 rendered")
+	pdf := []byte("%PDF-1.4 other")
 	client := &fakeClient{
-		snapshot: snapshotWith(locktivity.Document{
-			DocumentID:       "doc-1",
-			Name:             "Policy",
-			Checksum:         strings.Repeat("0", 64),
-			ArtifactPath:     "documents/policy.pdf",
-			ArtifactChecksum: digestOf(rendered),
-			FileURL:          "https://files.example/rendered",
-			SourcePath:       "documents/policy.md",
-			SourceURL:        "https://files.example/source",
-		}),
+		snapshot: snapshotWith(
+			locktivity.Document{
+				DocumentID:       "doc-1",
+				Name:             "Policy",
+				Checksum:         strings.Repeat("0", 64),
+				ArtifactPath:     "documents/policy.pdf",
+				ArtifactChecksum: digestOf(rendered),
+				FileURL:          "https://files.example/rendered",
+				SourcePath:       "documents/policy.md",
+				SourceURL:        "https://files.example/source",
+			},
+			locktivity.Document{
+				DocumentID: "doc-2", Name: "Other", ArtifactPath: "documents/other.pdf",
+				ArtifactChecksum: digestOf(pdf), FileURL: "https://files.example/other",
+			},
+		),
 		files: map[string][]byte{
 			"https://files.example/rendered": rendered,
 			"https://files.example/source":   []byte("tampered source"),
+			"https://files.example/other":    pdf,
 		},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
-		t.Fatalf("expected source checksum mismatch, got %v", err)
+	output, gaps, outputDir := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "checksum mismatch", "file", "source_file")
+	if _, err := os.Stat(filepath.Join(outputDir, "documents/doc-1/policy.pdf")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the left-out document's rendering should be removed from staging, stat err=%v", err)
+	}
+	if len(output.Files) != 1 || output.Files[0].PackPath != "artifacts/documents/doc-2/other.pdf" {
+		t.Errorf("files = %+v, want only the other document", output.Files)
+	}
+	for _, path := range []string{"artifacts/documents/doc-1/policy.pdf", "artifacts/documents/doc-1/policy.md"} {
+		found := false
+		for _, gap := range gaps {
+			found = found || (gap.Path == path && gap.Pointer == "")
+		}
+		if !found {
+			t.Errorf("no gap for the artifact %s", path)
+		}
 	}
 }
 
-func TestCollectRejectsUnsafeSourcePath(t *testing.T) {
+func TestCollectLeavesOutADocumentWithAnUnsafeSourcePath(t *testing.T) {
 	rendered := []byte("%PDF-1.4 rendered")
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
@@ -259,15 +325,15 @@ func TestCollectRejectsUnsafeSourcePath(t *testing.T) {
 		},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "unsafe source path") {
-		t.Fatalf("expected unsafe source path error, got %v", err)
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "unsafe source path", "file", "source_file")
+	if len(client.ops) != 0 {
+		t.Errorf("a document with an unsafe path should download nothing, got %v", client.ops)
 	}
 }
 
-func TestCollectRejectsChecksumMismatch(t *testing.T) {
+func TestCollectLeavesOutADocumentThatFailsItsChecksum(t *testing.T) {
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
 			DocumentID:       "doc-1",
@@ -280,15 +346,14 @@ func TestCollectRejectsChecksumMismatch(t *testing.T) {
 		files: map[string][]byte{"https://files.example/tampered": []byte("other bytes")},
 	}
 
-	outputDir := t.TempDir()
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: outputDir},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
-		t.Fatalf("expected checksum mismatch, got %v", err)
-	}
+	output, gaps, outputDir := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "checksum mismatch", "file")
 	if _, statErr := os.Stat(filepath.Join(outputDir, "documents/doc-1/tampered.pdf")); !errors.Is(statErr, os.ErrNotExist) {
 		t.Fatalf("failed checksum should remove staged file, stat err=%v", statErr)
+	}
+	if len(output.Files) != 0 {
+		t.Errorf("files = %+v, want none", output.Files)
 	}
 }
 
@@ -302,22 +367,18 @@ func TestCollectRemovesStagedFileAfterDownloadError(t *testing.T) {
 			FileURL:          "https://files.example/interrupted",
 		}),
 		files: map[string][]byte{"https://files.example/interrupted": []byte("partial bytes")},
-		errs:  map[string]error{"https://files.example/interrupted": errors.New("connection reset")},
+		errs:  map[string]error{"https://files.example/interrupted": &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET}},
 	}
 
-	outputDir := t.TempDir()
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: outputDir},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "connection reset") {
-		t.Fatalf("expected download error, got %v", err)
-	}
+	output, gaps, outputDir := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeVendorError, "connection reset", "file")
 	if _, statErr := os.Stat(filepath.Join(outputDir, "documents/doc-1/interrupted.pdf")); !errors.Is(statErr, os.ErrNotExist) {
 		t.Fatalf("failed download should remove staged file, stat err=%v", statErr)
 	}
 }
 
-func TestCollectRejectsMissingChecksum(t *testing.T) {
+func TestCollectLeavesOutADocumentWithoutAChecksum(t *testing.T) {
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
 			DocumentID:   "doc-1",
@@ -329,63 +390,58 @@ func TestCollectRejectsMissingChecksum(t *testing.T) {
 		files: map[string][]byte{"https://files.example/x": []byte("bytes")},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "no usable checksum") {
-		t.Fatalf("expected a missing-checksum failure, got %v", err)
-	}
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "no usable checksum", "file")
 }
 
-func TestCollectRejectsUnsafeArtifactPaths(t *testing.T) {
+func TestCollectLeavesOutDocumentsWithUnsafeArtifactPaths(t *testing.T) {
 	for _, path := range []string{"../escape.pdf", "/abs/path.pdf", ""} {
 		client := &fakeClient{
 			snapshot: snapshotWith(locktivity.Document{
-				DocumentID:   "doc-1",
-				Name:         "Evil",
-				VersionID:    "ver-1",
-				ArtifactPath: path,
-				FileURL:      "https://files.example/evil",
+				DocumentID:       "doc-1",
+				Name:             "Evil",
+				VersionID:        "ver-1",
+				ArtifactPath:     path,
+				ArtifactChecksum: digestOf([]byte("x")),
+				FileURL:          "https://files.example/evil",
 			}),
 			files: map[string][]byte{"https://files.example/evil": []byte("x")},
 		}
 
-		_, err := Collect(context.Background(), Config{
-			RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-		}, client)
-		if err == nil {
-			t.Errorf("expected error for artifact path %q", path)
+		output, gaps, _ := collect(t, client)
+
+		expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "unsafe artifact path", "file")
+		if len(gaps) != 1 {
+			t.Errorf("artifact path %q: gaps = %+v, want only the index pointer's", path, gaps)
 		}
 	}
 }
 
-func TestCollectCarriesWarningEntries(t *testing.T) {
+func TestCollectRecordsDocumentsWithNoFile(t *testing.T) {
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
-			DocumentID: "doc-2",
-			Name:       "Fileless",
-			Source:     "upload",
-			Warnings:   []string{"No file available; document skipped"},
+			DocumentID:   "doc-2",
+			Name:         "Fileless",
+			Source:       "upload",
+			Warnings:     []string{"No file available; document skipped"},
+			DocumentType: "evidencepack/document@v1",
 		}),
 	}
 
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, gaps, _ := collect(t, client)
 
-	if len(output.Files) != 0 {
-		t.Errorf("expected no staged files, got %d", len(output.Files))
+	if len(output.Files) != 0 || len(output.Metadata) != 0 || len(gaps) != 0 {
+		t.Errorf("a document with no file is an answer, not a gap: files %+v, metadata %+v, gaps %+v", output.Files, output.Metadata, gaps)
 	}
-	if len(output.Skipped) != 1 || output.Skipped[0] != "Fileless" {
-		t.Errorf("expected Fileless in skipped, got %+v", output.Skipped)
+	raw, err := json.Marshal(output.Index.Documents[0])
+	if err != nil {
+		t.Fatal(err)
 	}
-	documents := output.Index.Documents
-	warnings := documents[0].Warnings
-	if len(warnings) != 1 {
-		t.Errorf("expected warning carried through, got %+v", documents[0])
+	for _, want := range []string{`"file":null`, `"source_file":null`, `"text":null`, `"metadata":null`, `"version_number":null`, `"document_type":"evidencepack/document@v1"`, `"warnings":["No file available; document skipped"]`} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("entry %s lacks %s", raw, want)
+		}
 	}
 }
 
@@ -409,13 +465,7 @@ func TestCollectStagesVerifiedText(t *testing.T) {
 		},
 	}
 
-	outputDir := t.TempDir()
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: outputDir},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, outputDir := collect(t, client)
 
 	if len(output.Files) != 2 {
 		t.Fatalf("expected pdf and text staged, got %d files", len(output.Files))
@@ -442,9 +492,12 @@ func TestCollectStagesVerifiedText(t *testing.T) {
 	if entry.Text == nil || entry.Text.Digest != "sha256:"+digestOf(text) {
 		t.Errorf("unexpected text digest: %+v", entry.Text)
 	}
+	if strings.Join(client.ops, ",") != locktivity.FileDownload.Name+","+locktivity.TextDownload.Name {
+		t.Errorf("download operations = %v", client.ops)
+	}
 }
 
-func TestCollectRejectsTextChecksumMismatch(t *testing.T) {
+func TestCollectLeavesOutADocumentWhoseTextFailsItsChecksum(t *testing.T) {
 	pdf := []byte("%PDF-1.4 policy")
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
@@ -455,6 +508,7 @@ func TestCollectRejectsTextChecksumMismatch(t *testing.T) {
 			FileURL:          "https://files.example/pdf",
 			TextURL:          "https://files.example/text",
 			TextChecksum:     strings.Repeat("0", 64),
+			DocumentType:     "evidencepack/soc2-report@v1",
 		}),
 		files: map[string][]byte{
 			"https://files.example/pdf":  pdf,
@@ -462,11 +516,14 @@ func TestCollectRejectsTextChecksumMismatch(t *testing.T) {
 		},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
-		t.Fatalf("expected text checksum mismatch, got %v", err)
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "checksum mismatch", "file", "text", "metadata")
+	if len(output.Files) != 0 || len(output.Metadata) != 0 {
+		t.Errorf("the left-out document's artifacts should not be emitted: files %+v, metadata %+v", output.Files, output.Metadata)
+	}
+	if entry := output.Index.Documents[0]; entry.DocumentType == nil || *entry.DocumentType != "evidencepack/soc2-report@v1" {
+		t.Errorf("the left-out document should keep its type, got %+v", entry)
 	}
 }
 
@@ -504,19 +561,14 @@ func TestCollectEmitsTypedMetadata(t *testing.T) {
 		},
 	}
 
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, outputDir := collect(t, client)
 
 	if len(output.Metadata) != 1 {
 		t.Fatalf("expected one metadata artifact, got %d", len(output.Metadata))
 	}
 	metadata := output.Metadata[0]
-	if metadata.PackPath != "artifacts/documents/doc-1/metadata.json" {
-		t.Errorf("unexpected metadata path: %s", metadata.PackPath)
+	if metadata.PackPath != "artifacts/documents/doc-1/metadata.json" || metadata.RelPath != "documents/doc-1/metadata.json" {
+		t.Errorf("unexpected metadata paths: %s staged at %s", metadata.PackPath, metadata.RelPath)
 	}
 	if metadata.Schema != "evidencepack/soc2-report@v1" {
 		t.Errorf("unexpected metadata schema: %s", metadata.Schema)
@@ -559,9 +611,13 @@ func TestCollectEmitsTypedMetadata(t *testing.T) {
 	if auditorProvenance, ok := provenance["auditor"].(map[string]any); !ok || auditorProvenance["quote"] != "Report of Prescient Assurance" {
 		t.Errorf("unexpected auditor provenance: %+v", provenance)
 	}
-	rawMetadata, err := json.Marshal(metadata.Body)
+	rawMetadata, err := os.ReadFile(filepath.Join(outputDir, filepath.FromSlash(metadata.RelPath)))
 	if err != nil {
-		t.Fatalf("marshal metadata body: %v", err)
+		t.Fatalf("reading the staged metadata file: %v", err)
+	}
+	var staged map[string]any
+	if err := json.Unmarshal(rawMetadata, &staged); err != nil || staged["document_id"] != "doc-1" || staged["file_path"] != metadata.Body["file_path"] {
+		t.Errorf("the staged metadata file does not hold the body: %s (err %v)", rawMetadata, err)
 	}
 	for _, forbidden := range []string{"TOKEN_METADATA_CANARY", "TOKEN_PROVENANCE_CANARY", "SIGNED_URL_CANARY", "CALLBACK_SIGNATURE_CANARY", "SOURCE_METADATA_CANARY", "SOURCE_PROVENANCE_CANARY"} {
 		if strings.Contains(string(rawMetadata), forbidden) {
@@ -570,7 +626,7 @@ func TestCollectEmitsTypedMetadata(t *testing.T) {
 	}
 
 	entry := output.Index.Documents[0]
-	if entry.DocumentType != "evidencepack/soc2-report@v1" {
+	if entry.DocumentType == nil || *entry.DocumentType != "evidencepack/soc2-report@v1" {
 		t.Errorf("unexpected index document_type: %v", entry.DocumentType)
 	}
 	if entry.Metadata == nil || entry.Metadata.Path != "artifacts/documents/doc-1/metadata.json" {
@@ -591,19 +647,14 @@ func TestCollectWithoutSubstrateFields(t *testing.T) {
 		files: map[string][]byte{"https://files.example/pdf": pdf},
 	}
 
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, _ := collect(t, client)
 
 	if len(output.Files) != 1 || len(output.Metadata) != 0 {
 		t.Fatalf("expected pdf only, got %d files and %d metadata", len(output.Files), len(output.Metadata))
 	}
 	entry := output.Index.Documents[0]
-	if entry.Text != nil || entry.Metadata != nil || entry.DocumentType != "" {
-		t.Errorf("entry should omit text, metadata, and document_type without substrate fields: %+v", entry)
+	if entry.Text != nil || entry.Metadata != nil || entry.DocumentType != nil {
+		t.Errorf("entry should have no text, metadata, or document_type without substrate fields: %+v", entry)
 	}
 }
 
@@ -642,19 +693,13 @@ func TestCollectArtifactsDoNotLeakEphemeralSnapshotData(t *testing.T) {
 		},
 	}
 
-	output, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err != nil {
-		t.Fatalf("Collect failed: %v", err)
-	}
+	output, _, _ := collect(t, client)
 
 	raw, err := json.Marshal(struct {
 		Index    DocumentIndex      `json:"index"`
 		Metadata []MetadataArtifact `json:"metadata"`
 		Files    []StagedFile       `json:"files"`
-		Skipped  []string           `json:"skipped"`
-	}{Index: output.Index, Metadata: output.Metadata, Files: output.Files, Skipped: output.Skipped})
+	}{Index: output.Index, Metadata: output.Metadata, Files: output.Files})
 	if err != nil {
 		t.Fatalf("marshal output: %v", err)
 	}
@@ -676,7 +721,7 @@ func TestCollectArtifactsDoNotLeakEphemeralSnapshotData(t *testing.T) {
 	}
 }
 
-func TestCollectRejectsDuplicateMetadataPaths(t *testing.T) {
+func TestCollectLeavesOutADocumentWhoseMetadataPathIsTaken(t *testing.T) {
 	pdfA, pdfB := []byte("%PDF-1.4 a"), []byte("%PDF-1.4 b")
 	client := &fakeClient{
 		snapshot: snapshotWith(
@@ -697,15 +742,20 @@ func TestCollectRejectsDuplicateMetadataPaths(t *testing.T) {
 		},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "duplicate staged path") {
-		t.Fatalf("expected duplicate metadata path error, got %v", err)
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 1, componentsdk.CodeInvalidResponse, "duplicate staged path", "file", "metadata")
+	if output.Index.Documents[0].Metadata == nil || len(output.Metadata) != 1 {
+		t.Errorf("the first document should keep its metadata: %+v", output.Index.Documents[0])
+	}
+	for _, gap := range gaps {
+		if gap.Path != DocumentIndexPackPath {
+			t.Errorf("a path the first document holds must not get a gap: %+v", gap)
+		}
 	}
 }
 
-func TestCollectRejectsPdfNamedMetadataJSON(t *testing.T) {
+func TestCollectLeavesOutAFileNamedLikeItsMetadata(t *testing.T) {
 	pdf := []byte("%PDF-1.4 sneaky")
 	client := &fakeClient{
 		snapshot: snapshotWith(locktivity.Document{
@@ -716,15 +766,12 @@ func TestCollectRejectsPdfNamedMetadataJSON(t *testing.T) {
 		files: map[string][]byte{"https://files.example/sneaky": pdf},
 	}
 
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-	}, client)
-	if err == nil || !strings.Contains(err.Error(), "duplicate staged path") {
-		t.Fatalf("expected collision with the metadata artifact, got %v", err)
-	}
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "duplicate staged path", "file", "metadata")
 }
 
-func TestCollectRejectsUnsafeDocumentID(t *testing.T) {
+func TestCollectLeavesOutDocumentsWithUnsafeIDs(t *testing.T) {
 	pdf := []byte("content")
 	for _, id := range []string{"..", ".", "a/b", ""} {
 		client := &fakeClient{
@@ -737,16 +784,17 @@ func TestCollectRejectsUnsafeDocumentID(t *testing.T) {
 			}),
 			files: map[string][]byte{"https://files.example/policy": pdf},
 		}
-		_, err := Collect(context.Background(), Config{
-			RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
-		}, client)
-		if err == nil {
-			t.Errorf("expected error for document id %q", id)
+
+		output, gaps, _ := collect(t, client)
+
+		expectLeftOut(t, output, gaps, 0, componentsdk.CodeInvalidResponse, "unsafe document id", "file")
+		if len(output.Files) != 0 {
+			t.Errorf("document id %q: files = %+v, want none", id, output.Files)
 		}
 	}
 }
 
-func TestCollectRejectsDuplicateStagedPaths(t *testing.T) {
+func TestCollectLeavesOutTheSecondOfTwoDocumentsWithOnePath(t *testing.T) {
 	pdf := []byte("content")
 	client := &fakeClient{
 		snapshot: snapshotWith(
@@ -770,10 +818,60 @@ func TestCollectRejectsDuplicateStagedPaths(t *testing.T) {
 			"https://files.example/b": pdf,
 		},
 	}
-	_, err := Collect(context.Background(), Config{
-		RunKey: "run-1", Stager: dirStager{dir: t.TempDir()},
+
+	output, gaps, _ := collect(t, client)
+
+	expectLeftOut(t, output, gaps, 1, componentsdk.CodeInvalidResponse, "duplicate staged path", "file")
+	if output.Index.Documents[0].File == nil || len(output.Files) != 1 {
+		t.Errorf("the first document should ship: %+v", output.Index.Documents[0])
+	}
+}
+
+func TestCollectUnderAnotherNamePointsAtThatNamesFolder(t *testing.T) {
+	pdf := []byte("%PDF-1.4 policy")
+	text := []byte(`{"chunks":[]}`)
+	client := &fakeClient{
+		snapshot: snapshotWith(locktivity.Document{
+			DocumentID:       "doc-1",
+			Name:             "Acme SOC 2",
+			ArtifactPath:     "documents/acme-soc2.pdf",
+			ArtifactChecksum: digestOf(pdf),
+			FileURL:          "https://files.example/pdf",
+			TextURL:          "https://files.example/text",
+			TextChecksum:     digestOf(text),
+			DocumentType:     "evidencepack/soc2-report@v1",
+		}),
+		files: map[string][]byte{
+			"https://files.example/pdf":  pdf,
+			"https://files.example/text": text,
+		},
+	}
+	output, err := Collect(context.Background(), Config{
+		RunKey:   "run-1",
+		Stager:   dirStager{dir: t.TempDir()},
+		Recorder: &componentsdk.Recorder{},
+		Name:     "policies",
 	}, client)
-	if err == nil || !strings.Contains(err.Error(), "duplicate staged path") {
-		t.Fatalf("expected duplicate staged path error, got %v", err)
+	if err != nil {
+		t.Fatalf("Collect failed: %v", err)
+	}
+
+	entry := output.Index.Documents[0]
+	if entry.File == nil || entry.File.Path != "artifacts/policies/doc-1/acme-soc2.pdf" {
+		t.Errorf("file pointer = %+v, want artifacts/policies/doc-1/acme-soc2.pdf", entry.File)
+	}
+	if entry.Text == nil || entry.Text.Path != "artifacts/policies/doc-1/text.json" {
+		t.Errorf("text pointer = %+v, want artifacts/policies/doc-1/text.json", entry.Text)
+	}
+	if entry.Metadata == nil || entry.Metadata.Path != "artifacts/policies/doc-1/metadata.json" {
+		t.Errorf("metadata pointer = %+v, want artifacts/policies/doc-1/metadata.json", entry.Metadata)
+	}
+	if got := output.Metadata[0].Body["file_path"]; got != "artifacts/policies/doc-1/acme-soc2.pdf" {
+		t.Errorf("metadata file_path = %v, want artifacts/policies/doc-1/acme-soc2.pdf", got)
+	}
+	for _, a := range output.Artifacts()[1:] {
+		if !strings.HasPrefix(a.Path, "artifacts/policies/doc-1/") {
+			t.Errorf("artifact %s is outside the run's folder", a.Path)
+		}
 	}
 }

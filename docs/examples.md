@@ -60,7 +60,7 @@ variable does.
 
 ## Sample Output
 
-The index at `artifacts/documents.json`:
+The index at `artifacts/documents.document-index.json`:
 
 ```json
 {
@@ -82,6 +82,7 @@ The index at `artifacts/documents.json`:
         "content_type": "application/pdf",
         "byte_size": 1048576
       },
+      "source_file": null,
       "text": {
         "path": "artifacts/documents/doc_4f2a9c/text.json",
         "digest": "sha256:..."
@@ -102,7 +103,7 @@ The index at `artifacts/documents.json`:
 unzip -l evidence-*.epack | grep documents
 
 # See each document's name, type, and where its files landed
-unzip -p evidence-*.epack artifacts/documents.json | jq '.documents[] | {name, document_type, file: .file.path, text: .text.path}'
+unzip -p evidence-*.epack artifacts/documents.document-index.json | jq '.documents[] | {name, document_type, file: .file.path, text: .text.path}'
 
 # Read a document's extracted details (auditor, dates, and where each was found)
 unzip -p evidence-*.epack artifacts/documents/<id>/metadata.json | jq

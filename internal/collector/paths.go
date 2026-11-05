@@ -1,11 +1,19 @@
 package collector
 
-import "path"
+import (
+	"path"
+
+	"github.com/locktivity/epack/componentsdk"
+)
+
+// collectorName is the name in the collector's spec. Artifact paths in the
+// code use it.
+const collectorName = "documents"
+
+// DocumentIndexPackPath is the pack path for the top-level document index.
+var DocumentIndexPackPath = componentsdk.ArtifactPath(collectorName, DocumentIndexSchema)
 
 const (
-	// DocumentIndexPackPath is the pack path for the top-level document index.
-	DocumentIndexPackPath = "artifacts/documents.json"
-
 	artifactRoot         = "artifacts"
 	documentRoot         = "documents"
 	documentTextFile     = "text.json"
